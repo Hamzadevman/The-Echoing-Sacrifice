@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Echoing Sacrifice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Press Start 2P', cursive, monospace;
+            overflow: hidden;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 900px;
+            height: 650px;
+            border: 4px solid #4cc9f0;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(76, 201, 240, 0.3);
+        }
+
+        #gameCanvas {
+            background: #0a0e1a;
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .ui-panel {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 0;
+            border: 2px solid #4cc9f0;
+            backdrop-filter: none;
+            font-size: 10px;
+        }
+
+        #sacrificeCounter {
+            font-weight: bold;
+        }
+
+        #timer {
+            font-weight: bold;
+            color: #4cc9f0;
+            font-size: 12px;
+        }
+
+        #timer.warning {
+            color: #ff6b6b;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .control-key {
+            background: rgba(76, 201, 240, 0.2);
+            border: 2px solid #4cc9f0;
+            border-radius: 0;
+            padding: 6px 8px;
+            font-size: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+
+        .key {
+            background: #4cc9f0;
+            color: #000;
+            padding: 3px 6px;
+            border-radius: 0;
+            font-weight: bold;
+            margin-top: 3px;
+            font-size: 8px;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            border-radius: 0;
+            border: 3px solid #4cc9f0;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(76, 201, 240, 0.5);
+        }
+
+        #message h2 {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        #message p {
+            margin-bottom: 15px;
+            line-height: 1.4;
+            font-size: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            background: #4cc9f0;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            border: 2px solid #4cc9f0;
+        }
+
+        button:hover {
+            background: #2a9df4;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
+        button.secondary:hover {
+            background: #ff5252;
+        }
+
+        #deathScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.1);
+            display: none;
+            z-index: 50;
+        }
+
+        #levelIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #4cc9f0;
+            text-shadow: 2px 2px 0 #000;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 20;
+        }
+
+        #lava {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: #ff4444;
+            z-index: 5;
+            image-rendering: pixelated;
+        }
+
+        .lava-pattern {
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 4px,
+                    #ff6b6b 4px,
+                    #ff6b6b 8px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    #ff4444,
+                    #ff4444 4px,
+                    #ff6b6b 4px,
+                    #ff6b6b 8px
+                );
+            animation: lavaFlow 1s infinite linear;
+        }
+
+        @keyframes lavaFlow {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-8px); }
+        }
+
+        #restartScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            flex-direction: column;
+        }
+
+        .restart-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 0;
+            border: 4px solid #ff6b6b;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        }
+
+        .restart-content h2 {
+            color: #ff6b6b;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .restart-content p {
+            font-size: 10px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border: 2px solid #4cc9f0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4cc9f0;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .stat-label {
+            font-size: 8px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Pixel art cursor */
+        body {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><rect width="16" height="16" fill="%234cc9f0"/><rect x="4" y="4" width="8" height="8" fill="%23000"/></svg>'), auto;
+        }
+
+        button {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><rect width="16" height="16" fill="%23ff6b6b"/><rect x="4" y="4" width="8" height="8" fill="%23000"/></svg>'), pointer;
+        }
+
+        /* Loading screen */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0e1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+            flex-direction: column;
+        }
+
+        .pixel-loader {
+            width: 32px;
+            height: 32px;
+            border: 4px solid #4cc9f0;
+            image-rendering: pixelated;
+            margin-bottom: 20px;
+            animation: pixelSpin 1s infinite linear;
+        }
+
+        @keyframes pixelSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loadingText {
+            font-size: 12px;
+            color: #4cc9f0;
+        }
+
+        /* Main Menu Styles */
+        #mainMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            flex-direction: column;
+        }
+
+        .menu-content {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 0;
+            border: 4px solid #4cc9f0;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(76, 201, 240, 0.5);
+        }
+
+        .menu-content h1 {
+            color: #4cc9f0;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .menu-content p {
+            font-size: 10px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .menu-button {
+            background: #4cc9f0;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            border: 2px solid #4cc9f0;
+        }
+
+        .menu-button:hover {
+            background: #2a9df4;
+            transform: translateY(-2px);
+        }
+
+        .menu-button.secondary {
+            background: transparent;
+            color: #4cc9f0;
+        }
+
+        .menu-button.secondary:hover {
+            background: rgba(76, 201, 240, 0.1);
+        }
+
+        /* Cutscene Styles */
+        #cutsceneScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0e1a;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 600;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .cutscene-text {
+            color: #4cc9f0;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 0 #000;
+            max-width: 80%;
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease;
+        }
+
+        .cutscene-text.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .cutscene-character {
+            width: 80px;
+            height: 80px;
+            background: #4cc9f0;
+            margin-bottom: 30px;
+            position: relative;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 1s ease;
+        }
+
+        .cutscene-character.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .cutscene-character::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #000;
+            top: 20px;
+            left: 20px;
+        }
+
+        .cutscene-character::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #000;
+            top: 20px;
+            right: 20px;
+        }
+
+        .cutscene-progress {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #4cc9f0;
+        }
+
+        /* Audio Controls */
+        #audioControls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        #muteButton {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4cc9f0;
+            color: #4cc9f0;
+            padding: 5px 10px;
+            font-size: 8px;
+            cursor: pointer;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="loadingScreen">
+        <div class="pixel-loader"></div>
+        <div id="loadingText">LOADING SACRIFICE...</div>
+    </div>
+
+    <div id="mainMenu">
+        <div class="menu-content">
+            <h1>THE ECHOING SACRIFICE</h1>
+            <p>IN THE ANCIENT TEMPLE OF ECHOES, YOU MUST SACRIFICE YOUR OWN REFLECTION TO PROCEED. BUT BEWARE - THE LAVA RISES QUICKLY, AND YOUR TIME IS LIMITED.</p>
+            
+            <div class="menu-buttons">
+                <button class="menu-button" id="startButton">BEGIN JOURNEY</button>
+                <button class="menu-button secondary" id="controlsButton">CONTROLS</button>
+                <button class="menu-button secondary" id="quitMenuButton">ABANDON TEMPLE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cutsceneScreen">
+        <div class="cutscene-character" id="cutsceneChar"></div>
+        <div class="cutscene-text" id="cutsceneText1">DEEP WITHIN THE ANCIENT TEMPLE OF ECHOES...</div>
+        <div class="cutscene-text" id="cutsceneText2">A HERO SEEKS THE ULTIMATE POWER...</div>
+        <div class="cutscene-text" id="cutsceneText3">BUT THE TEMPLE DEMANDS A PRICE...</div>
+        <div class="cutscene-text" id="cutsceneText4">YOUR VERY REFLECTION MUST BE SACRIFICED...</div>
+        <div class="cutscene-text" id="cutsceneText5">PROVE YOUR WORTH OR PERISH IN THE RISING LAVA!</div>
+        <div class="cutscene-progress" id="cutsceneProgress">CLICK TO CONTINUE</div>
+    </div>
+
+    <div id="gameContainer">
+        <div id="audioControls">
+            <button id="muteButton">🔊 SOUND ON</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        
+        <div id="lava"><div class="lava-pattern"></div></div>
+        
+        <div id="ui">
+            <div class="ui-panel" id="sacrificeCounter">
+                SACRIFICES: <span id="count">0</span>
+            </div>
+            <div class="ui-panel" id="timer">
+                TIME: <span id="timeDisplay">10.0</span>s
+            </div>
+        </div>
+
+        <div id="controls">
+            <div class="control-key">
+                MOVE
+                <div class="key">←→</div>
+            </div>
+            <div class="control-key">
+                JUMP
+                <div class="key">SPACE</div>
+            </div>
+            <div class="control-key">
+                SPAWN SACRIFICE
+                <div class="key">E / CLICK</div>
+            </div>
+            <div class="control-key">
+                RESTART
+                <div class="key">R</div>
+            </div>
+        </div>
+
+        <div id="deathScreen"></div>
+        
+        <div id="levelIndicator">LEVEL 1</div>
+
+        <div id="message">
+            <h2 id="messageTitle"></h2>
+            <p id="messageText"></p>
+            <div class="button-container">
+                <button id="continueButton">CONTINUE</button>
+            </div>
+        </div>
+
+        <div id="restartScreen">
+            <div class="restart-content">
+                <h2>🔥 YOU DIED! 🔥</h2>
+                <p>The lava consumed your sacrifice! The temple demands more...</p>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalLevel">1</div>
+                        <div class="stat-label">LEVEL</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalSacrifices">0</div>
+                        <div class="stat-label">SACRIFICES</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalTime">0s</div>
+                        <div class="stat-label">TIME</div>
+                    </div>
+                </div>
+
+                <div class="button-container">
+                    <button id="restartButton">TRY AGAIN</button>
+                    <button id="quitButton" class="secondary">QUIT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const CANVAS_WIDTH = 900;
+        const CANVAS_HEIGHT = 600;
+        const TILE_SIZE = 40;
+        const TIME_LIMIT = 10;
+        const LAVA_HEIGHT = 40;
+
+        // Game State
+        let gameState = {
+            player: null,
+            echo: null,
+            platforms: [],
+            sacrificePoints: [],
+            doors: [],
+            movingPlatforms: [],
+            sacrifices: 0,
+            level: 1,
+            gameOver: false,
+            timeLeft: TIME_LIMIT,
+            lastTime: 0,
+            isPlayerDead: false,
+            deathTimer: 0,
+            startTime: 0,
+            totalTime: 0,
+            gameLoopId: null,
+            canSpawnSacrifice: true,
+            sacrificeCooldown: 0,
+            soundEnabled: true
+        };
+
+        // Cutscene state
+        let cutsceneState = {
+            currentStep: 0,
+            totalSteps: 5,
+            isActive: false
+        };
+
+        // Sound effects
+        const sounds = {
+            jump: null,
+            sacrifice: null,
+            doorOpen: null,
+            levelComplete: null,
+            death: null,
+            backgroundMusic: null
+        };
+
+        // Preload assets
+        function preloadAssets(callback) {
+            // Create sound effects using Web Audio API
+            createSounds();
+            
+            // Simulate asset loading
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainMenu').style.display = 'flex';
+                callback();
+            }, 1500);
+        }
+
+        // Create sound effects using Web Audio API
+        function createSounds() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Jump sound
+            sounds.jump = () => {
+                if (!gameState.soundEnabled) return;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                oscillator.frequency.exponentialRampToValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            };
+
+            // Sacrifice sound
+            sounds.sacrifice = () => {
+                if (!gameState.soundEnabled) return;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(392.00, audioContext.currentTime); // G4
+                oscillator.frequency.exponentialRampToValueAtTime(293.66, audioContext.currentTime + 0.3); // D4
+                
+                gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.4);
+            };
+
+            // Door open sound
+            sounds.doorOpen = () => {
+                if (!gameState.soundEnabled) return;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(220.00, audioContext.currentTime); // A3
+                oscillator.frequency.exponentialRampToValueAtTime(440.00, audioContext.currentTime + 0.5); // A4
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.6);
+            };
+
+            // Level complete sound
+            sounds.levelComplete = () => {
+                if (!gameState.soundEnabled) return;
+                const times = [0, 0.1, 0.2, 0.3];
+                const frequencies = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                
+                times.forEach((time, index) => {
+                    setTimeout(() => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(frequencies[index], audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.3);
+                    }, time * 1000);
+                });
+            };
+
+            // Death sound
+            sounds.death = () => {
+                if (!gameState.soundEnabled) return;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(220.00, audioContext.currentTime); // A3
+                oscillator.frequency.exponentialRampToValueAtTime(55.00, audioContext.currentTime + 1); // A1
+                
+                gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1);
+            };
+
+            // Background music (simple looping melody)
+            sounds.backgroundMusic = () => {
+                if (!gameState.soundEnabled) return;
+                
+                function playMelody() {
+                    const melody = [
+                        { freq: 261.63, duration: 0.3 }, // C4
+                        { freq: 329.63, duration: 0.3 }, // E4
+                        { freq: 392.00, duration: 0.3 }, // G4
+                        { freq: 523.25, duration: 0.6 }, // C5
+                        { freq: 392.00, duration: 0.3 }, // G4
+                        { freq: 329.63, duration: 0.3 }, // E4
+                        { freq: 261.63, duration: 0.6 }  // C4
+                    ];
+                    
+                    let time = audioContext.currentTime;
+                    
+                    melody.forEach(note => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(note.freq, time);
+                        gainNode.gain.setValueAtTime(0.1, time);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, time + note.duration);
+                        
+                        oscillator.start(time);
+                        oscillator.stop(time + note.duration);
+                        
+                        time += note.duration;
+                    });
+                    
+                    // Loop
+                    setTimeout(playMelody, time * 1000);
+                }
+                
+                playMelody();
+            };
+        }
+
+        // Entity Classes
+        class Player {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 24;
+                this.height = 24;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.speed = 5;
+                this.jumpForce = -12;
+                this.gravity = 0.5;
+                this.isOnGround = false;
+                this.color = '#4cc9f0';
+                this.positionHistory = [];
+                this.maxHistoryLength = 30;
+                this.onMovingPlatform = null;
+            }
+
+            update(deltaTime) {
+                // Apply gravity
+                this.velocityY += this.gravity;
+
+                // Update position
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                // Boundary checking - death when touching lava
+                if (this.y + this.height > CANVAS_HEIGHT - LAVA_HEIGHT) {
+                    gameState.isPlayerDead = true;
+                    gameState.deathTimer = 1;
+                    gameState.totalTime = (performance.now() - gameState.startTime) / 1000;
+                    sounds.death();
+                    return;
+                }
+                
+                // Horizontal boundaries
+                this.x = Math.max(0, Math.min(CANVAS_WIDTH - this.width, this.x));
+
+                // Reset ground state
+                this.isOnGround = false;
+                this.onMovingPlatform = null;
+
+                // Platform collisions
+                for (const platform of [...gameState.platforms, ...gameState.movingPlatforms]) {
+                    if (this.checkCollision(platform)) {
+                        // Bottom collision (landing on platform)
+                        if (this.velocityY > 0 && this.y + this.height > platform.y && this.y < platform.y) {
+                            this.y = platform.y - this.height;
+                            this.velocityY = 0;
+                            this.isOnGround = true;
+                            
+                            // If on moving platform, move with it
+                            if (platform instanceof MovingPlatform) {
+                                this.onMovingPlatform = platform;
+                            }
+                        }
+                        // Top collision (hitting head)
+                        else if (this.velocityY < 0 && this.y < platform.y + platform.height) {
+                            this.y = platform.y + platform.height;
+                            this.velocityY = 0;
+                        }
+                        // Side collisions
+                        else if (this.velocityX > 0 && this.x + this.width > platform.x && this.x < platform.x) {
+                            this.x = platform.x - this.width;
+                        }
+                        else if (this.velocityX < 0 && this.x < platform.x + platform.width && this.x + this.width > platform.x + platform.width) {
+                            this.x = platform.x + platform.width;
+                        }
+                    }
+                }
+
+                // Record position for echo
+                this.positionHistory.unshift({x: this.x, y: this.y});
+                if (this.positionHistory.length > this.maxHistoryLength) {
+                    this.positionHistory.pop();
+                }
+            }
+
+            checkCollision(object) {
+                return this.x < object.x + object.width &&
+                       this.x + this.width > object.x &&
+                       this.y < object.y + object.height &&
+                       this.y + this.height > object.y;
+            }
+
+            jump() {
+                if (this.isOnGround) {
+                    this.velocityY = this.jumpForce;
+                    this.isOnGround = false;
+                    this.onMovingPlatform = null;
+                    sounds.jump();
+                }
+            }
+
+            draw(ctx) {
+                // Pixel art player
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                
+                // Pixel art details
+                ctx.fillStyle = '#000';
+                // Eyes
+                ctx.fillRect(Math.round(this.x + 6), Math.round(this.y + 6), 3, 3);
+                ctx.fillRect(Math.round(this.x + 15), Math.round(this.y + 6), 3, 3);
+                // Mouth
+                if (gameState.echo && !gameState.echo.isSacrificed) {
+                    ctx.fillRect(Math.round(this.x + 9), Math.round(this.y + 15), 6, 2);
+                } else {
+                    ctx.fillRect(Math.round(this.x + 9), Math.round(this.y + 16), 6, 1);
+                }
+            }
+
+            reset() {
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.positionHistory = [];
+                this.onMovingPlatform = null;
+            }
+        }
+
+        class Echo {
+            constructor() {
+                this.x = 0;
+                this.y = 0;
+                this.width = 24;
+                this.height = 24;
+                this.color = 'rgba(76, 201, 240, 0.6)';
+                this.isSacrificed = false;
+            }
+
+            update(playerHistory) {
+                if (this.isSacrificed) return;
+
+                // Follow player with delay
+                if (playerHistory.length > 0) {
+                    const delayedPos = playerHistory[Math.min(15, playerHistory.length - 1)];
+                    this.x = delayedPos.x;
+                    this.y = delayedPos.y;
+                }
+            }
+
+            draw(ctx) {
+                if (this.isSacrificed) return;
+
+                // Ghost effect
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                
+                // Dither pattern
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                for (let i = 0; i < this.width; i += 4) {
+                    for (let j = 0; j < this.height; j += 4) {
+                        if ((i + j) % 8 === 0) {
+                            ctx.fillRect(Math.round(this.x + i), Math.round(this.y + j), 2, 2);
+                        }
+                    }
+                }
+            }
+
+            sacrifice() {
+                if (this.isSacrificed) return;
+                this.isSacrificed = true;
+                gameState.sacrifices++;
+                gameState.timeLeft = TIME_LIMIT;
+                document.getElementById('count').textContent = gameState.sacrifices;
+                sounds.sacrifice();
+                
+                createPixelParticles(this.x + this.width/2, this.y + this.height/2, '#4cc9f0');
+            }
+
+            reset() {
+                this.isSacrificed = false;
+                if (gameState.player) {
+                    this.x = gameState.player.x;
+                    this.y = gameState.player.y;
+                }
+            }
+        }
+
+        class Platform {
+            constructor(x, y, width, height, color = '#2a9df4') {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+            }
+
+            draw(ctx) {
+                // Pixel art platform
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                
+                // Brick pattern
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                for (let i = 0; i < this.width; i += 8) {
+                    ctx.fillRect(Math.round(this.x + i), Math.round(this.y), 1, this.height);
+                }
+                for (let j = 0; j < this.height; j += 8) {
+                    ctx.fillRect(Math.round(this.x), Math.round(this.y + j), this.width, 1);
+                }
+            }
+        }
+
+        class MovingPlatform extends Platform {
+            constructor(x, y, width, height, moveX, moveY, speed, color = '#ff6b6b') {
+                super(x, y, width, height, color);
+                this.startX = x;
+                this.startY = y;
+                this.moveX = moveX;
+                this.moveY = moveY;
+                this.speed = speed;
+                this.direction = 1;
+                this.progress = 0;
+            }
+
+            update(deltaTime) {
+                // Smooth movement using deltaTime
+                this.progress += this.speed * this.direction * deltaTime * 60; // Normalize for 60fps
+                
+                // Reverse direction at boundaries
+                if (this.progress >= 1) {
+                    this.progress = 1;
+                    this.direction = -1;
+                } else if (this.progress <= 0) {
+                    this.progress = 0;
+                    this.direction = 1;
+                }
+                
+                // Calculate new position
+                this.x = this.startX + this.moveX * this.progress;
+                this.y = this.startY + this.moveY * this.progress;
+            }
+        }
+
+        class SacrificePoint {
+            constructor(x, y, requiredEchoes = 1, targetDoor = null) {
+                this.x = x;
+                this.y = y;
+                this.width = 32;
+                this.height = 32;
+                this.requiredEchoes = requiredEchoes;
+                this.currentEchoes = 0;
+                this.isActive = false;
+                this.targetDoor = targetDoor;
+                this.color = '#ff6b6b';
+                this.pulse = 0;
+            }
+
+            update() {
+                if (this.isActive) return;
+
+                // Pulsing effect
+                this.pulse = (this.pulse + 0.1) % (Math.PI * 2);
+
+                // Check echo collision
+                if (!gameState.echo.isSacrificed && this.checkCollision(gameState.echo)) {
+                    this.currentEchoes++;
+                    gameState.echo.sacrifice();
+                    
+                    if (this.currentEchoes >= this.requiredEchoes) {
+                        this.activate();
+                    }
+                }
+            }
+
+            checkCollision(entity) {
+                return entity.x < this.x + this.width &&
+                       entity.x + entity.width > this.x &&
+                       entity.y < this.y + this.height &&
+                       entity.y + entity.height > this.y;
+            }
+
+            activate() {
+                this.isActive = true;
+                this.color = '#4ecdc4';
+                
+                if (this.targetDoor) {
+                    this.targetDoor.isOpen = true;
+                    sounds.doorOpen();
+                }
+                
+                createPixelParticles(this.x + this.width/2, this.y + this.height/2, '#4ecdc4');
+            }
+
+            draw(ctx) {
+                // Crystal design
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                
+                // Crystal facets
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width/2, this.y);
+                ctx.lineTo(this.x + this.width, this.y + this.height/2);
+                ctx.lineTo(this.x + this.width/2, this.y + this.height);
+                ctx.lineTo(this.x, this.y + this.height/2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Progress indicator
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 8px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    `${this.currentEchoes}/${this.requiredEchoes}`,
+                    this.x + this.width/2,
+                    this.y + this.height/2 + 3
+                );
+            }
+        }
+
+        class Door {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 32;
+                this.height = 64;
+                this.isOpen = false;
+                this.color = '#ff9e64';
+            }
+
+            draw(ctx) {
+                if (this.isOpen) {
+                    // Open door
+                    ctx.fillStyle = 'rgba(255, 158, 100, 0.3)';
+                    ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                    ctx.strokeStyle = '#4ecdc4';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                } else {
+                    // Closed door
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+                    
+                    // Door details
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(Math.round(this.x + 12), Math.round(this.y + 15), 8, 4);
+                    ctx.fillRect(Math.round(this.x + 8), Math.round(this.y + 25), 16, 2);
+                    ctx.fillRect(Math.round(this.x + 8), Math.round(this.y + 35), 16, 2);
+                }
+            }
+
+            checkCollision(player) {
+                if (this.isOpen) return false;
+                return player.x < this.x + this.width &&
+                       player.x + player.width > this.x &&
+                       player.y < this.y + this.height &&
+                       player.y + player.height > this.y;
+            }
+        }
+
+        // Pixel particle effect
+        function createPixelParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    const canvas = document.getElementById('gameCanvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.fillStyle = color;
+                    for (let j = 0; j < 3; j++) {
+                        const px = x + Math.random() * 20 - 10;
+                        const py = y + Math.random() * 20 - 10;
+                        ctx.fillRect(Math.round(px), Math.round(py), 3, 3);
+                    }
+                }, i * 50);
+            }
+        }
+
+        // Spawn sacrifice function
+        function spawnSacrifice() {
+            if (!gameState.canSpawnSacrifice || !gameState.echo || gameState.echo.isSacrificed || gameState.isPlayerDead) return;
+            
+            gameState.echo.sacrifice();
+            gameState.canSpawnSacrifice = false;
+            gameState.sacrificeCooldown = 1.0;
+            
+            createPixelParticles(gameState.player.x + gameState.player.width/2, 
+                               gameState.player.y + gameState.player.height/2, 
+                               '#4cc9f0');
+        }
+
+        // Game Initialization
+        function initGame() {
+            // Cancel any existing game loop
+            if (gameState.gameLoopId) {
+                cancelAnimationFrame(gameState.gameLoopId);
+            }
+
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Hide screens
+            document.getElementById('restartScreen').style.display = 'none';
+            document.getElementById('message').style.display = 'none';
+            document.getElementById('deathScreen').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'none';
+
+            // Show level indicator
+            const levelIndicator = document.getElementById('levelIndicator');
+            levelIndicator.textContent = `LEVEL ${gameState.level}`;
+            levelIndicator.style.opacity = 1;
+            setTimeout(() => {
+                levelIndicator.style.opacity = 0;
+            }, 1500);
+
+            // Reset game state
+            gameState.player = new Player(50, 300);
+            gameState.echo = new Echo();
+            gameState.platforms = [];
+            gameState.sacrificePoints = [];
+            gameState.doors = [];
+            gameState.movingPlatforms = [];
+            gameState.sacrifices = 0;
+            gameState.gameOver = false;
+            gameState.timeLeft = TIME_LIMIT;
+            gameState.lastTime = performance.now();
+            gameState.isPlayerDead = false;
+            gameState.deathTimer = 0;
+            gameState.startTime = performance.now();
+            gameState.totalTime = 0;
+            gameState.canSpawnSacrifice = true;
+            gameState.sacrificeCooldown = 0;
+
+            // Create level
+            createLevel(gameState.level);
+
+            // Update UI
+            document.getElementById('count').textContent = '0';
+            document.getElementById('timeDisplay').textContent = '10.0';
+
+            // Start background music
+            if (gameState.soundEnabled) {
+                sounds.backgroundMusic();
+            }
+
+            // Game loop
+            function gameLoop(currentTime) {
+                gameState.gameLoopId = requestAnimationFrame(gameLoop);
+                
+                const deltaTime = Math.min((currentTime - gameState.lastTime) / 1000, 0.1);
+                gameState.lastTime = currentTime;
+
+                // Update sacrifice cooldown
+                if (!gameState.canSpawnSacrifice) {
+                    gameState.sacrificeCooldown -= deltaTime;
+                    if (gameState.sacrificeCooldown <= 0) {
+                        gameState.canSpawnSacrifice = true;
+                    }
+                }
+
+                // Update timer
+                if (!gameState.echo.isSacrificed && !gameState.isPlayerDead) {
+                    gameState.timeLeft -= deltaTime;
+                    if (gameState.timeLeft <= 0) {
+                        gameState.isPlayerDead = true;
+                        gameState.deathTimer = 1;
+                        gameState.totalTime = (currentTime - gameState.startTime) / 1000;
+                        sounds.death();
+                    }
+                }
+
+                // Update timer display
+                const timerElement = document.getElementById('timer');
+                const timeDisplay = document.getElementById('timeDisplay');
+                timeDisplay.textContent = Math.max(0, gameState.timeLeft).toFixed(1);
+                timerElement.className = gameState.timeLeft < 3 ? 'warning' : '';
+
+                // Handle death
+                if (gameState.isPlayerDead) {
+                    gameState.deathTimer -= deltaTime;
+                    document.getElementById('deathScreen').style.display = 'block';
+                    
+                    if (gameState.deathTimer <= 0) {
+                        showRestartScreen();
+                        return;
+                    }
+                }
+
+                // Clear canvas
+                ctx.fillStyle = '#0a0e1a';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Draw star background
+                ctx.fillStyle = '#4cc9f0';
+                for (let i = 0; i < 20; i++) {
+                    const brightness = Math.sin(currentTime * 0.001 + i) * 0.5 + 0.5;
+                    ctx.globalAlpha = brightness * 0.3;
+                    ctx.fillRect(i * 45 + (currentTime * 0.01) % 45, (i * 23) % CANVAS_HEIGHT, 1, 1);
+                }
+                ctx.globalAlpha = 1.0;
+
+                // Update entities if not dead
+                if (!gameState.isPlayerDead) {
+                    // Update moving platforms
+                    gameState.movingPlatforms.forEach(platform => platform.update(deltaTime));
+                    
+                    // Store player position before update for moving platform logic
+                    const prevX = gameState.player.x;
+                    const prevY = gameState.player.y;
+                    
+                    gameState.player.update(deltaTime);
+                    
+                    // If player is on a moving platform, move with it
+                    if (gameState.player.onMovingPlatform) {
+                        const platform = gameState.player.onMovingPlatform;
+                        const deltaX = platform.x - (platform.startX + platform.moveX * (platform.progress - platform.speed * platform.direction * deltaTime * 60));
+                        const deltaY = platform.y - (platform.startY + platform.moveY * (platform.progress - platform.speed * platform.direction * deltaTime * 60));
+                        
+                        gameState.player.x += deltaX;
+                        gameState.player.y += deltaY;
+                    }
+                    
+                    gameState.echo.update(gameState.player.positionHistory);
+                    
+                    // Update sacrifice points
+                    for (const point of gameState.sacrificePoints) {
+                        point.update();
+                    }
+
+                    // Check door collisions for level completion
+                    for (const door of gameState.doors) {
+                        if (door.isOpen && gameState.player.checkCollision(door)) {
+                            sounds.levelComplete();
+                            nextLevel();
+                            return;
+                        }
+                    }
+                }
+
+                // Draw everything
+                for (const platform of [...gameState.platforms, ...gameState.movingPlatforms]) {
+                    platform.draw(ctx);
+                }
+                
+                for (const door of gameState.doors) {
+                    door.draw(ctx);
+                }
+                
+                for (const point of gameState.sacrificePoints) {
+                    point.draw(ctx);
+                }
+
+                gameState.echo.draw(ctx);
+                if (!gameState.isPlayerDead) {
+                    gameState.player.draw(ctx);
+                }
+            }
+
+            gameState.lastTime = performance.now();
+            gameState.gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function createLevel(level) {
+            // Clear previous level
+            gameState.platforms = [];
+            gameState.sacrificePoints = [];
+            gameState.doors = [];
+            gameState.movingPlatforms = [];
+
+            if (level === 1) {
+                // Level 1 - Tutorial level
+                gameState.platforms.push(new Platform(0, 500, 900, 20)); // Ground
+                gameState.platforms.push(new Platform(100, 400, 200, 20));
+                gameState.platforms.push(new Platform(400, 350, 150, 20));
+                gameState.platforms.push(new Platform(650, 300, 200, 20));
+                
+                const door = new Door(800, 436);
+                gameState.doors.push(door);
+                
+                const sacrificePoint = new SacrificePoint(700, 268, 1, door);
+                gameState.sacrificePoints.push(sacrificePoint);
+            }
+            else if (level === 2) {
+                // Level 2 - Platform jumping challenge
+                gameState.platforms.push(new Platform(0, 500, 300, 20)); // Left ground
+                gameState.platforms.push(new Platform(600, 500, 300, 20)); // Right ground
+                
+                // Platform sequence with gaps
+                gameState.platforms.push(new Platform(100, 450, 80, 20));
+                gameState.platforms.push(new Platform(250, 400, 80, 20));
+                gameState.platforms.push(new Platform(400, 350, 80, 20));
+                gameState.platforms.push(new Platform(550, 400, 80, 20));
+                gameState.platforms.push(new Platform(700, 450, 80, 20));
+                
+                // Higher platforms
+                gameState.platforms.push(new Platform(350, 250, 80, 20));
+                gameState.platforms.push(new Platform(500, 200, 80, 20));
+                
+                const door = new Door(50, 436);
+                gameState.doors.push(door);
+                
+                const sacrificePoint1 = new SacrificePoint(750, 418, 1, door);
+                const sacrificePoint2 = new SacrificePoint(375, 218, 1, door);
+                gameState.sacrificePoints.push(sacrificePoint1, sacrificePoint2);
+            }
+            else if (level === 3) {
+                // Level 3 - Moving platforms (FIXED)
+                gameState.platforms.push(new Platform(0, 500, 200, 20)); // Left ground
+                gameState.platforms.push(new Platform(700, 500, 200, 20)); // Right ground
+                
+                // Smooth moving platforms
+                gameState.movingPlatforms.push(new MovingPlatform(250, 450, 80, 20, 200, 0, 0.02)); // Horizontal
+                gameState.movingPlatforms.push(new MovingPlatform(500, 400, 80, 20, 0, -150, 0.015)); // Vertical
+                gameState.movingPlatforms.push(new MovingPlatform(350, 300, 80, 20, 100, 0, 0.025)); // Short horizontal
+                
+                // Static platforms for rest points
+                gameState.platforms.push(new Platform(100, 350, 80, 20));
+                gameState.platforms.push(new Platform(600, 250, 80, 20));
+                
+                const door = new Door(800, 436);
+                gameState.doors.push(door);
+                
+                const sacrificePoint = new SacrificePoint(650, 218, 2, door);
+                gameState.sacrificePoints.push(sacrificePoint);
+            }
+            else if (level === 4) {
+                // Level 4 - Advanced platforming
+                gameState.platforms.push(new Platform(0, 500, 150, 20)); // Start platform
+                
+                // Challenging platform layout
+                gameState.platforms.push(new Platform(200, 450, 60, 20));
+                gameState.platforms.push(new Platform(300, 400, 60, 20));
+                gameState.platforms.push(new Platform(400, 350, 60, 20));
+                gameState.platforms.push(new Platform(500, 300, 60, 20));
+                gameState.platforms.push(new Platform(600, 250, 60, 20));
+                gameState.platforms.push(new Platform(700, 200, 60, 20));
+                gameState.platforms.push(new Platform(600, 150, 60, 20));
+                gameState.platforms.push(new Platform(500, 100, 60, 20));
+                gameState.platforms.push(new Platform(400, 150, 60, 20));
+                gameState.platforms.push(new Platform(300, 200, 60, 20));
+                gameState.platforms.push(new Platform(200, 250, 60, 20));
+                gameState.platforms.push(new Platform(100, 300, 60, 20));
+                
+                const door = new Door(50, 436);
+                gameState.doors.push(door);
+                
+                const sacrificePoint = new SacrificePoint(750, 168, 3, door);
+                gameState.sacrificePoints.push(sacrificePoint);
+            }
+            else if (level === 5) {
+                // Level 5 - Final challenge with smooth moving platforms
+                gameState.platforms.push(new Platform(0, 500, 100, 20)); // Start
+                
+                // Complex platform arrangement with smooth movement
+                gameState.movingPlatforms.push(new MovingPlatform(150, 450, 60, 20, 200, 0, 0.018)); // Horizontal
+                gameState.platforms.push(new Platform(400, 400, 60, 20));
+                gameState.movingPlatforms.push(new MovingPlatform(500, 350, 60, 20, 0, -150, 0.012)); // Vertical
+                gameState.platforms.push(new Platform(600, 250, 60, 20));
+                gameState.movingPlatforms.push(new MovingPlatform(500, 200, 60, 20, -200, 0, 0.022)); // Horizontal back
+                gameState.platforms.push(new Platform(250, 150, 60, 20));
+                gameState.movingPlatforms.push(new MovingPlatform(150, 100, 60, 20, 0, 100, 0.015)); // Vertical down
+                gameState.platforms.push(new Platform(300, 300, 60, 20));
+                
+                const door = new Door(800, 436);
+                gameState.doors.push(door);
+                
+                const sacrificePoint1 = new SacrificePoint(750, 418, 1, door);
+                const sacrificePoint2 = new SacrificePoint(430, 368, 1, door);
+                const sacrificePoint3 = new SacrificePoint(275, 118, 1, door);
+                gameState.sacrificePoints.push(sacrificePoint1, sacrificePoint2, sacrificePoint3);
+            }
+        }
+
+        function nextLevel() {
+            gameState.level++;
+            if (gameState.level > 5) {
+                showMessage("TEMPLE CONQUERED!", "YOU HAVE MASTERED THE ECHOING SACRIFICE! YOUR JOURNEY IS COMPLETE.");
+                gameState.level = 1;
+            } else {
+                initGame();
+            }
+        }
+
+        function showMessage(title, text) {
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('message').style.display = 'block';
+            gameState.gameOver = true;
+            cancelAnimationFrame(gameState.gameLoopId);
+        }
+
+        function showRestartScreen() {
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('finalSacrifices').textContent = gameState.sacrifices;
+            document.getElementById('finalTime').textContent = `${Math.round(gameState.totalTime)}s`;
+            
+            document.getElementById('restartScreen').style.display = 'flex';
+            gameState.gameOver = true;
+            cancelAnimationFrame(gameState.gameLoopId);
+        }
+
+        // Input Handling
+        let keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver && e.key === 'r') {
+                gameState.level = 1;
+                initGame();
+                return;
+            }
+
+            if (gameState.gameOver || gameState.isPlayerDead) return;
+
+            if (!keys[e.key]) {
+                keys[e.key] = true;
+                
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        gameState.player.velocityX = -gameState.player.speed;
+                        break;
+                    case 'ArrowRight':
+                        gameState.player.velocityX = gameState.player.speed;
+                        break;
+                    case ' ':
+                        gameState.player.jump();
+                        break;
+                    case 'e':
+                    case 'E':
+                        spawnSacrifice();
+                        break;
+                    case 'r':
+                    case 'R':
+                        gameState.level = 1;
+                        initGame();
+                        break;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                gameState.player.velocityX = 0;
+            }
+        });
+
+        // Mouse click to spawn sacrifice
+        document.getElementById('gameCanvas').addEventListener('click', () => {
+            if (!gameState.gameOver && !gameState.isPlayerDead) {
+                spawnSacrifice();
+            }
+        });
+
+        // Button event listeners
+        document.getElementById('continueButton').addEventListener('click', () => {
+            document.getElementById('message').style.display = 'none';
+            gameState.gameOver = false;
+            gameState.level = 1;
+            initGame();
+        });
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            gameState.level = 1;
+            initGame();
+        });
+
+        document.getElementById('quitButton').addEventListener('click', () => {
+            document.getElementById('restartScreen').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'flex';
+        });
+
+        // Sound toggle
+        document.getElementById('muteButton').addEventListener('click', () => {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            document.getElementById('muteButton').textContent = 
+                gameState.soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+        });
+
+        // Cutscene functions
+        function startCutscene() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('cutsceneScreen').style.display = 'flex';
+            cutsceneState.isActive = true;
+            cutsceneState.currentStep = 0;
+            
+            showCutsceneStep(0);
+        }
+
+        function showCutsceneStep(step) {
+            const texts = document.querySelectorAll('.cutscene-text');
+            const character = document.getElementById('cutsceneChar');
+            const progress = document.getElementById('cutsceneProgress');
+            
+            // Reset all
+            texts.forEach(text => {
+                text.classList.remove('active');
+            });
+            character.classList.remove('active');
+            
+            // Show current step
+            setTimeout(() => {
+                if (step < texts.length) {
+                    texts[step].classList.add('active');
+                    character.classList.add('active');
+                    progress.textContent = `CLICK TO CONTINUE (${step + 1}/${cutsceneState.totalSteps})`;
+                }
+                
+                if (step === texts.length - 1) {
+                    progress.textContent = 'CLICK TO BEGIN';
+                }
+            }, 500);
+        }
+
+        function nextCutsceneStep() {
+            cutsceneState.currentStep++;
+            
+            if (cutsceneState.currentStep >= cutsceneState.totalSteps) {
+                endCutscene();
+            } else {
+                showCutsceneStep(cutsceneState.currentStep);
+            }
+        }
+
+        function endCutscene() {
+            document.getElementById('cutsceneScreen').style.display = 'none';
+            cutsceneState.isActive = false;
+            initGame();
+        }
+
+        // Menu event listeners
+        document.getElementById('startButton').addEventListener('click', startCutscene);
+        document.getElementById('controlsButton').addEventListener('click', () => {
+            alert("CONTROLS:\n\n←→ Arrow Keys: Move\nSpace: Jump\nE Key or Mouse Click: Spawn Sacrifice\nR Key: Restart\n\nSacrifice your echo to open doors and progress through the temple!");
+        });
+        document.getElementById('quitMenuButton').addEventListener('click', () => {
+            if (confirm('Are you sure you want to abandon the temple?')) {
+                window.close();
+            }
+        });
+
+        // Cutscene click handler
+        document.getElementById('cutsceneScreen').addEventListener('click', () => {
+            if (cutsceneState.isActive) {
+                nextCutsceneStep();
+            }
+        });
+
+        // Start the game after loading
+        preloadAssets(() => {
+            // Game will start when player clicks "Begin Journey"
+        });
+    </script>
+</body>
+</html>
